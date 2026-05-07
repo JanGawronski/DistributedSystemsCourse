@@ -1,0 +1,3 @@
+cxx-server/build/
+rust-client/target/
+*.pid

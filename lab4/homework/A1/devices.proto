@@ -1,0 +1,108 @@
+syntax = "proto3";
+
+package smart.home;
+
+import "google/protobuf/empty.proto";
+
+message DeviceId {
+  string id = 1;
+}
+
+message DeviceInfo {
+  string id = 1;
+  string device_type = 2;
+  string subtype = 3;
+  string location = 4;
+  map<string, string> metadata = 5;
+}
+
+message TemperatureRecord {
+  int64 ts = 1;
+  double temperature = 2;
+}
+
+message FridgeState {
+  double temperature = 1;
+  bool door_open = 2;
+  repeated TemperatureRecord history = 3;
+}
+
+message HeaterState {
+  double setpoint = 1;
+  double current_temp = 2;
+  bool is_on = 3;
+}
+
+message CameraState {
+  double pan = 1;
+  double tilt = 2;
+  double zoom = 3;
+  bool recording = 4;
+}
+
+message DeviceState {
+  string id = 1;
+  oneof state {
+    FridgeState fridge = 2;
+    HeaterState heater = 3;
+    CameraState camera = 4;
+  }
+  int64 timestamp = 10;
+}
+
+message ListDevicesResponse {
+  repeated DeviceInfo devices = 1;
+}
+
+message SetTemperature { double temperature = 1; }
+message ToggleDoor { bool open = 1; }
+message FridgeCommand {
+  oneof action {
+    SetTemperature set_temp = 1;
+    ToggleDoor door = 2;
+  }
+}
+
+message SetSetpoint { double setpoint = 1; }
+message TurnOnOff { bool on = 1; }
+message HeaterCommand {
+  oneof action {
+    SetSetpoint setpoint = 1;
+    TurnOnOff onoff = 2;
+  }
+}
+
+message SetPTZ { double pan = 1; double tilt = 2; double zoom = 3; }
+message RecordAction { bool start = 1; }
+message CameraCommand {
+  oneof action {
+    SetPTZ ptz = 1;
+    RecordAction record = 2;
+  }
+}
+
+message CommandRequest {
+  string id = 1;
+  oneof cmd {
+    FridgeCommand fridge = 2;
+    HeaterCommand heater = 3;
+    CameraCommand camera = 4;
+  }
+}
+
+message CommandResponse {
+  bool ok = 1;
+  string message = 2;
+  DeviceState state = 3;
+}
+
+service DeviceManager {
+  rpc ListDevices (google.protobuf.Empty) returns (ListDevicesResponse);
+
+  rpc GetDeviceInfo (DeviceId) returns (DeviceInfo);
+  rpc GetDeviceState (DeviceId) returns (DeviceState);
+
+  rpc SendCommand (CommandRequest) returns (CommandResponse);
+
+  rpc StreamDeviceState (DeviceId) returns (stream DeviceState);
+}
