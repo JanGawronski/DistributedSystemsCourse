@@ -1,0 +1,73 @@
+flowchart LR
+    subgraph USERS[Users]
+        A1[Agency 1]
+        A2[Agency 2]
+        C1[Carrier 1<br/>people+cargo]
+        C2[Carrier 2<br/>cargo+satellite]
+        ADM[Administrator]
+    end
+
+    subgraph EXCHANGES[Exchanges]
+        E_ORD[space.orders<br/>direct]
+        E_CONF[space.confirm<br/>direct]
+        E_EVT[space.events<br/>topic]
+        E_AG[space.admin.agencies<br/>fanout]
+        E_CA[space.admin.carriers<br/>fanout]
+    end
+
+    subgraph QUEUES[Queues]
+        QP[service.people]
+        QC[service.cargo]
+        QS[service.satellite]
+
+        QA1C[agency.A1.confirm]
+        QA2C[agency.A2.confirm]
+        QA1A[agency.A1.admin]
+        QA2A[agency.A2.admin]
+
+        QC1A[carrier.C1.admin]
+        QC2A[carrier.C2.admin]
+
+        QADM[admin.audit]
+    end
+
+    A1 -->|publish order,<br/>routing key: people/cargo/satellite| E_ORD
+    A2 -->|publish order,<br/>routing key: people/cargo/satellite| E_ORD
+
+    E_ORD -->|bind key people| QP
+    E_ORD -->|bind key cargo| QC
+    E_ORD -->|bind key satellite| QS
+
+    QP --> C1
+    QC --> C1
+    QC --> C2
+    QS --> C2
+
+    C1 -->|publish confirmation,<br/>routing key: agency name| E_CONF
+    C2 -->|publish confirmation,<br/>routing key: agency name| E_CONF
+
+    E_CONF -->|bind key A1| QA1C
+    E_CONF -->|bind key A2| QA2C
+    QA1C --> A1
+    QA2C --> A2
+
+    ADM -->|broadcast to agencies| E_AG
+    ADM -->|broadcast to carriers| E_CA
+
+    E_AG --> QA1A
+    E_AG --> QA2A
+    QA1A --> A1
+    QA2A --> A2
+
+    E_CA --> QC1A
+    E_CA --> QC2A
+    QC1A --> C1
+    QC2A --> C2
+
+    A1 -->|event copy| E_EVT
+    A2 -->|event copy| E_EVT
+    C1 -->|event copy| E_EVT
+    C2 -->|event copy| E_EVT
+    ADM -->|event copy| E_EVT
+    E_EVT -->|bind key #| QADM
+    QADM --> ADM
